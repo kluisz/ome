@@ -1,0 +1,80 @@
+apiVersion: ome.io/v1beta1
+kind: ClusterServingRuntime
+metadata:
+  name: vllm-latency-optimized
+  annotations:
+    # Performance capability annotations for enhanced runtime selection
+    ome.io/max-context-length: "32768"
+    ome.io/optimization-profiles: "LatencyOptimized,Balanced"
+    ome.io/max-throughput: "200"
+    ome.io/typical-p99-latency: "50"
+    ome.io/max-concurrency: "100"
+    ome.io/cost-tier: "medium"
+    ome.io/engine-type: "vllm"
+spec:
+  disabled: false
+  supportedModelFormats:
+    - modelFormat:
+        name: safetensors
+        operator: Equal
+        weight: 1
+      modelFramework:
+        name: transformers
+        operator: Equal
+        weight: 1
+      modelArchitecture: LlamaForCausalLM
+      autoSelect: true
+      priority: 2
+  protocolVersions:
+    - openAI
+  modelSizeRange:
+    min: 1B
+    max: 10B
+  engineConfig:
+    tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+    volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+    runner:
+      name: ome-container
+      image: docker.io/vllm/vllm-openai:v0.9.0.1
+      ports:
+        - containerPort: 8080
+          name: http1
+          protocol: TCP
+      command:
+        - python3
+        - -m
+        - vllm.entrypoints.openai.api_server
+        - --port
+        - "8080"
+        - --model
+        - $(MODEL_PATH)
+        - --served-model-name
+        - vllm-model
+        # Latency-optimized settings
+        - --enable-chunked-prefill
+        - --max-num-batched-tokens
+        - "2048"
+        - --gpu-memory-utilization
+        - "0.9"
+      volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+      resources:
+        requests:
+          cpu: "4"
+          memory: "16Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "8"
+          memory: "32Gi"
+          nvidia.com/gpu: "1"
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: 8080

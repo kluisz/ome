@@ -1,0 +1,14 @@
+apiVersion: ome.io/v1beta1
+kind: InferenceService
+metadata:
+  name: llama-batch-processor
+  namespace: default
+spec:
+  model:
+    name: llama-3-2-3b
+  engine: {}
+  # Requirements for batch document processing - prioritize throughput
+  requirements:
+    optimizationPolicy: ThroughputOptimized
+    maxContextLength: 32768
+    minThroughput: 300      # Need high throughput for batch jobs

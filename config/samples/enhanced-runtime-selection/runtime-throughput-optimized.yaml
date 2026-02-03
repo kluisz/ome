@@ -1,0 +1,81 @@
+apiVersion: ome.io/v1beta1
+kind: ClusterServingRuntime
+metadata:
+  name: vllm-throughput-optimized
+  annotations:
+    # Performance capability annotations for enhanced runtime selection
+    ome.io/max-context-length: "65536"
+    ome.io/optimization-profiles: "ThroughputOptimized,Balanced"
+    ome.io/max-throughput: "500"
+    ome.io/typical-p99-latency: "150"
+    ome.io/max-concurrency: "256"
+    ome.io/cost-tier: "high"
+    ome.io/engine-type: "vllm"
+spec:
+  disabled: false
+  supportedModelFormats:
+    - modelFormat:
+        name: safetensors
+        operator: Equal
+        weight: 1
+      modelFramework:
+        name: transformers
+        operator: Equal
+        weight: 1
+      modelArchitecture: LlamaForCausalLM
+      autoSelect: true
+      priority: 2
+  protocolVersions:
+    - openAI
+  modelSizeRange:
+    min: 1B
+    max: 10B
+  engineConfig:
+    tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+    volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+    runner:
+      name: ome-container
+      image: docker.io/vllm/vllm-openai:v0.9.0.1
+      ports:
+        - containerPort: 8080
+          name: http1
+          protocol: TCP
+      command:
+        - python3
+        - -m
+        - vllm.entrypoints.openai.api_server
+        - --port
+        - "8080"
+        - --model
+        - $(MODEL_PATH)
+        - --served-model-name
+        - vllm-model
+        # Throughput-optimized settings
+        - --disable-log-requests
+        - --max-num-seqs
+        - "256"
+        - --gpu-memory-utilization
+        - "0.95"
+        - --enable-prefix-caching
+      volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+      resources:
+        requests:
+          cpu: "8"
+          memory: "32Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "16"
+          memory: "64Gi"
+          nvidia.com/gpu: "1"
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: 8080

@@ -1,0 +1,79 @@
+apiVersion: ome.io/v1beta1
+kind: ClusterServingRuntime
+metadata:
+  name: vllm-cost-optimized
+  annotations:
+    # Performance capability annotations for enhanced runtime selection
+    ome.io/max-context-length: "16384"
+    ome.io/optimization-profiles: "CostOptimized,Balanced"
+    ome.io/max-throughput: "100"
+    ome.io/typical-p99-latency: "200"
+    ome.io/max-concurrency: "64"
+    ome.io/cost-tier: "low"
+    ome.io/engine-type: "vllm"
+spec:
+  disabled: false
+  supportedModelFormats:
+    - modelFormat:
+        name: safetensors
+        operator: Equal
+        weight: 1
+      modelFramework:
+        name: transformers
+        operator: Equal
+        weight: 1
+      modelArchitecture: LlamaForCausalLM
+      autoSelect: true
+      priority: 1
+  protocolVersions:
+    - openAI
+  modelSizeRange:
+    min: 1B
+    max: 10B
+  engineConfig:
+    tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+    volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+    runner:
+      name: ome-container
+      image: docker.io/vllm/vllm-openai:v0.9.0.1
+      ports:
+        - containerPort: 8080
+          name: http1
+          protocol: TCP
+      command:
+        - python3
+        - -m
+        - vllm.entrypoints.openai.api_server
+        - --port
+        - "8080"
+        - --model
+        - $(MODEL_PATH)
+        - --served-model-name
+        - vllm-model
+        # Cost-optimized settings
+        - --max-num-seqs
+        - "128"
+        - --gpu-memory-utilization
+        - "0.85"
+      volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+      resources:
+        requests:
+          cpu: "2"
+          memory: "8Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "4"
+          memory: "16Gi"
+          nvidia.com/gpu: "1"
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: 8080

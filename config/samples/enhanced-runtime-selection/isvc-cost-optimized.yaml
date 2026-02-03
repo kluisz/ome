@@ -1,0 +1,14 @@
+apiVersion: ome.io/v1beta1
+kind: InferenceService
+metadata:
+  name: llama-budget-assistant
+  namespace: default
+spec:
+  model:
+    name: llama-3-2-3b
+  engine: {}
+  # Requirements for a budget-constrained startup
+  requirements:
+    optimizationPolicy: CostOptimized
+    maxContextLength: 4096
+    maxConcurrency: 20

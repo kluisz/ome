@@ -1,0 +1,15 @@
+apiVersion: ome.io/v1beta1
+kind: InferenceService
+metadata:
+  name: llama-chatbot-latency
+  namespace: default
+spec:
+  model:
+    name: llama-3-2-3b
+  engine: {}
+  # Requirements for a real-time chatbot - prioritize low latency
+  requirements:
+    optimizationPolicy: LatencyOptimized
+    maxContextLength: 8192
+    maxP99Latency: 100      # Need < 100ms latency
+    maxConcurrency: 50

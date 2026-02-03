@@ -65,9 +65,11 @@ func (s *DefaultRuntimeScorer) CalculateScore(runtime *v1beta1.ServingRuntimeSpe
 // CompareRuntimes compares two runtime matches for a given model.
 // Returns positive if r1 is better, negative if r2 is better, 0 if equal.
 func (s *DefaultRuntimeScorer) CompareRuntimes(r1, r2 RuntimeMatch, model *v1beta1.BaseModelSpec) int {
-	// First, compare by score
-	if r1.Score != r2.Score {
-		return int(r1.Score - r2.Score)
+	// First, compare by total score (base score + requirement score)
+	r1Total := s.getTotalScore(r1)
+	r2Total := s.getTotalScore(r2)
+	if r1Total != r2Total {
+		return int(r1Total - r2Total)
 	}
 
 	// If scores are equal, compare by model size range if available
@@ -97,6 +99,15 @@ func (s *DefaultRuntimeScorer) CompareRuntimes(r1, r2 RuntimeMatch, model *v1bet
 	}
 
 	return 0
+}
+
+// getTotalScore calculates the total score including requirement score.
+func (s *DefaultRuntimeScorer) getTotalScore(match RuntimeMatch) float64 {
+	total := float64(match.Score)
+	if match.MatchDetails.RequirementMatch != nil {
+		total += match.MatchDetails.RequirementMatch.Score
+	}
+	return total
 }
 
 // calculateFormatScore calculates the score for a specific supported format.

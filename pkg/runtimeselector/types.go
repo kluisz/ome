@@ -90,6 +90,39 @@ type MatchDetails struct {
 
 	// Reasons contains human-readable reasons for match/mismatch
 	Reasons []string
+
+	// RequirementMatch contains requirement matching information (nil if no requirements specified)
+	RequirementMatch *RequirementMatch
+}
+
+// RequirementMatch contains detailed information about how well a runtime meets workload requirements.
+type RequirementMatch struct {
+	// ContextLengthMet indicates if the runtime meets the context length requirement
+	ContextLengthMet bool
+
+	// OptimizationProfileMatch indicates if the runtime supports the requested optimization profile
+	OptimizationProfileMatch bool
+
+	// ThroughputMet indicates if the runtime meets the throughput requirement
+	ThroughputMet bool
+
+	// LatencyMet indicates if the runtime meets the latency requirement
+	LatencyMet bool
+
+	// ConcurrencyMet indicates if the runtime meets the concurrency requirement
+	ConcurrencyMet bool
+
+	// Score is the calculated requirement score (higher is better)
+	Score float64
+
+	// Reasons contains human-readable reasons for the match result
+	Reasons []string
+}
+
+// AllRequirementsMet returns true if all specified requirements are met.
+func (r *RequirementMatch) AllRequirementsMet() bool {
+	return r.ContextLengthMet && r.OptimizationProfileMatch &&
+		r.ThroughputMet && r.LatencyMet && r.ConcurrencyMet
 }
 
 // RuntimeFetcher abstracts the fetching of runtime resources.
@@ -151,6 +184,28 @@ type RuntimeScorer interface {
 	// CalculateFormatScore calculates the score contribution for a specific model format.
 	// Higher scores indicate better matches.
 	CalculateFormatScore(model *v1beta1.BaseModelSpec, supportedFormat v1beta1.SupportedModelFormat, priority int64) int64
+}
+
+// RequirementChecker validates if a runtime meets workload requirements.
+type RequirementChecker interface {
+	// CheckRequirements validates if a runtime meets the specified requirements.
+	// Returns the match details and whether all hard requirements are met.
+	CheckRequirements(runtime *v1beta1.ServingRuntimeSpec, annotations map[string]string,
+		requirements *v1beta1.ServiceRequirements) (*RequirementMatch, bool)
+
+	// CalculateRequirementScore calculates a score based on how well requirements are met.
+	// Higher scores indicate better matches.
+	CalculateRequirementScore(match *RequirementMatch, requirements *v1beta1.ServiceRequirements) float64
+}
+
+// ParameterInjector injects optimization parameters into runtime containers.
+type ParameterInjector interface {
+	// InjectParameters modifies the runtime spec to include optimization parameters
+	// based on the specified requirements and optimization policy.
+	InjectParameters(runtime *v1beta1.ServingRuntimeSpec, requirements *v1beta1.ServiceRequirements) error
+
+	// GetOptimizationArgs returns the engine arguments for a specific optimization policy and engine type.
+	GetOptimizationArgs(engineType string, policy v1beta1.OptimizationPolicy, requirements *v1beta1.ServiceRequirements) []string
 }
 
 // Config holds configuration for the runtime selector.

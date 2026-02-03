@@ -78,6 +78,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/sgl-project/ome/pkg/apis/ome/v1beta1.RunnerSpec":                 schema_pkg_apis_ome_v1beta1_RunnerSpec(ref),
 		"github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ScalerAuthenticationRef":    schema_pkg_apis_ome_v1beta1_ScalerAuthenticationRef(ref),
 		"github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ServiceMetadata":            schema_pkg_apis_ome_v1beta1_ServiceMetadata(ref),
+		"github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ServiceRequirements":        schema_pkg_apis_ome_v1beta1_ServiceRequirements(ref),
 		"github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ServingRuntime":             schema_pkg_apis_ome_v1beta1_ServingRuntime(ref),
 		"github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ServingRuntimeList":         schema_pkg_apis_ome_v1beta1_ServingRuntimeList(ref),
 		"github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ServingRuntimePodSpec":      schema_pkg_apis_ome_v1beta1_ServingRuntimePodSpec(ref),
@@ -931,6 +932,7 @@ func schema_pkg_apis_ome_v1beta1_AcceleratorResource(ref common.ReferenceCallbac
 						},
 					},
 				},
+				
 			},
 		},
 		Dependencies: []string{
@@ -3648,6 +3650,7 @@ func schema_pkg_apis_ome_v1beta1_HuggingFaceSecretReference(ref common.Reference
 						},
 					},
 				},
+				
 			},
 		},
 	}
@@ -3835,11 +3838,17 @@ func schema_pkg_apis_ome_v1beta1_InferenceServiceSpec(ref common.ReferenceCallba
 							Ref:         ref("github.com/sgl-project/ome/pkg/apis/ome/v1beta1.AcceleratorSelector"),
 						},
 					},
+					"requirements": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Requirements defines workload-specific requirements for runtime selection This enables intelligent, workload-aware runtime selection based on optimization policies, performance SLAs, and capability requirements.",
+							Ref:         ref("github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ServiceRequirements"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/sgl-project/ome/pkg/apis/ome/v1beta1.AcceleratorSelector", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.DecoderSpec", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.EngineSpec", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.KedaConfig", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ModelRef", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.PredictorSpec", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.RouterSpec", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ServingRuntimeRef"},
+			"github.com/sgl-project/ome/pkg/apis/ome/v1beta1.AcceleratorSelector", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.DecoderSpec", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.EngineSpec", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.KedaConfig", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ModelRef", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.PredictorSpec", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.RouterSpec", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ServiceRequirements", "github.com/sgl-project/ome/pkg/apis/ome/v1beta1.ServingRuntimeRef"},
 	}
 }
 
@@ -4597,6 +4606,7 @@ func schema_pkg_apis_ome_v1beta1_ModelFormat(ref common.ReferenceCallback) commo
 						},
 					},
 				},
+				
 			},
 		},
 	}
@@ -4638,6 +4648,7 @@ func schema_pkg_apis_ome_v1beta1_ModelFrameworkSpec(ref common.ReferenceCallback
 						},
 					},
 				},
+				
 			},
 		},
 	}
@@ -4692,6 +4703,7 @@ func schema_pkg_apis_ome_v1beta1_ModelRef(ref common.ReferenceCallback) common.O
 						},
 					},
 				},
+				
 			},
 		},
 	}
@@ -5094,6 +5106,7 @@ func schema_pkg_apis_ome_v1beta1_ModelSpec(ref common.ReferenceCallback) common.
 						},
 					},
 				},
+				
 			},
 		},
 		Dependencies: []string{
@@ -5231,6 +5244,7 @@ func schema_pkg_apis_ome_v1beta1_ObjectReference(ref common.ReferenceCallback) c
 						},
 					},
 				},
+				
 			},
 		},
 	}
@@ -6188,6 +6202,7 @@ func schema_pkg_apis_ome_v1beta1_PredictorExtensionSpec(ref common.ReferenceCall
 						},
 					},
 				},
+				
 			},
 		},
 		Dependencies: []string{
@@ -7694,6 +7709,7 @@ func schema_pkg_apis_ome_v1beta1_RunnerSpec(ref common.ReferenceCallback) common
 						},
 					},
 				},
+				
 			},
 		},
 		Dependencies: []string{
@@ -7724,6 +7740,7 @@ func schema_pkg_apis_ome_v1beta1_ScalerAuthenticationRef(ref common.ReferenceCal
 						},
 					},
 				},
+				
 			},
 		},
 	}
@@ -7770,6 +7787,54 @@ func schema_pkg_apis_ome_v1beta1_ServiceMetadata(ref common.ReferenceCallback) c
 					},
 				},
 				Required: []string{"engine", "version", "gpuType", "gpuCount"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_ome_v1beta1_ServiceRequirements(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ServiceRequirements defines workload-specific requirements for intelligent runtime selection. These requirements enable the runtime selector to choose the most appropriate runtime based on performance characteristics, optimization policies, and capability requirements.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"optimizationPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "OptimizationPolicy specifies the optimization strategy for runtime selection. This influences which runtime is selected and what engine parameters are injected.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"maxContextLength": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxContextLength specifies the maximum context length required in tokens. Runtimes that cannot support this context length will be filtered out.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"minThroughput": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MinThroughput specifies the minimum required throughput in tokens/second. Runtimes with lower typical throughput will be scored lower.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"maxP99Latency": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxP99Latency specifies the maximum acceptable P99 latency in milliseconds. Runtimes with higher typical latency will be scored lower.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"maxConcurrency": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxConcurrency specifies the maximum number of concurrent requests required. This may influence runtime selection and parameter injection.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+				},
 			},
 		},
 	}
@@ -8087,6 +8152,7 @@ func schema_pkg_apis_ome_v1beta1_ServingRuntimeRef(ref common.ReferenceCallback)
 						},
 					},
 				},
+				
 			},
 		},
 	}

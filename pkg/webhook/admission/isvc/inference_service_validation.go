@@ -120,6 +120,12 @@ func (v *InferenceServiceValidator) validateInferenceService(ctx context.Context
 		}
 		allWarnings = append(allWarnings, warnings...)
 	}
+
+	// Validate service requirements
+	if err := validateServiceRequirements(isvc); err != nil {
+		return allWarnings, err
+	}
+
 	return allWarnings, nil
 }
 
@@ -439,4 +445,48 @@ func hasFullRunnerConfig(engine *v1beta1.EngineSpec) bool {
 	}
 
 	return false
+}
+
+// validateServiceRequirements validates the ServiceRequirements field
+func validateServiceRequirements(isvc *v1beta1.InferenceService) error {
+	req := isvc.Spec.Requirements
+	if req == nil {
+		return nil
+	}
+
+	// Validate OptimizationPolicy if specified
+	if req.OptimizationPolicy != "" {
+		validPolicies := map[v1beta1.OptimizationPolicy]bool{
+			v1beta1.LatencyOptimized:    true,
+			v1beta1.ThroughputOptimized: true,
+			v1beta1.CostOptimized:       true,
+			v1beta1.Balanced:            true,
+		}
+		if !validPolicies[req.OptimizationPolicy] {
+			return fmt.Errorf("invalid optimizationPolicy %q, must be one of: LatencyOptimized, ThroughputOptimized, CostOptimized, Balanced",
+				req.OptimizationPolicy)
+		}
+	}
+
+	// Validate MaxContextLength is positive if specified
+	if req.MaxContextLength != nil && *req.MaxContextLength <= 0 {
+		return fmt.Errorf("maxContextLength must be a positive integer, got %d", *req.MaxContextLength)
+	}
+
+	// Validate MinThroughput is positive if specified
+	if req.MinThroughput != nil && *req.MinThroughput <= 0 {
+		return fmt.Errorf("minThroughput must be a positive integer, got %d", *req.MinThroughput)
+	}
+
+	// Validate MaxP99Latency is positive if specified
+	if req.MaxP99Latency != nil && *req.MaxP99Latency <= 0 {
+		return fmt.Errorf("maxP99Latency must be a positive integer, got %d", *req.MaxP99Latency)
+	}
+
+	// Validate MaxConcurrency is positive if specified
+	if req.MaxConcurrency != nil && *req.MaxConcurrency <= 0 {
+		return fmt.Errorf("maxConcurrency must be a positive integer, got %d", *req.MaxConcurrency)
+	}
+
+	return nil
 }

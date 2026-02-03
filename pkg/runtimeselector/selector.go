@@ -13,10 +13,12 @@ import (
 
 // defaultSelector is the default implementation of the Selector interface.
 type defaultSelector struct {
-	config  *Config
-	fetcher RuntimeFetcher
-	matcher RuntimeMatcher
-	scorer  RuntimeScorer
+	config             *Config
+	fetcher            RuntimeFetcher
+	matcher            RuntimeMatcher
+	scorer             RuntimeScorer
+	requirementChecker RequirementChecker
+	parameterInjector  ParameterInjector
 }
 
 // New creates a new Selector with default implementations.
@@ -28,10 +30,12 @@ func New(client client.Client) Selector {
 // NewWithConfig creates a new Selector with the provided configuration.
 func NewWithConfig(config *Config) Selector {
 	return &defaultSelector{
-		config:  config,
-		fetcher: NewDefaultRuntimeFetcher(config.Client),
-		matcher: NewDefaultRuntimeMatcher(config),
-		scorer:  NewDefaultRuntimeScorer(config),
+		config:             config,
+		fetcher:            NewDefaultRuntimeFetcher(config.Client),
+		matcher:            NewDefaultRuntimeMatcher(config),
+		scorer:             NewDefaultRuntimeScorer(config),
+		requirementChecker: NewDefaultRequirementChecker(config),
+		parameterInjector:  NewDefaultParameterInjector(config),
 	}
 }
 
@@ -252,6 +256,28 @@ func (s *defaultSelector) evaluateRuntime(ctx context.Context, spec *v1beta1.Ser
 		return nil
 	}
 
+	// Check requirements if specified
+	var requirementMatch *RequirementMatch
+	if isvc.Spec.Requirements != nil {
+		// Get runtime annotations for capability checking
+		annotations := s.getRuntimeAnnotations(ctx, name, isvc.Namespace, isCluster)
+		reqMatch, hardReqMet := s.requirementChecker.CheckRequirements(spec, annotations, isvc.Spec.Requirements)
+		requirementMatch = reqMatch
+
+		// If hard requirements are not met (e.g., context length), skip this runtime
+		if !hardReqMet {
+			logger.V(2).Info("Runtime does not meet hard requirements",
+				"runtime", name,
+				"reasons", reqMatch.Reasons)
+			return nil
+		}
+
+		logger.V(2).Info("Runtime requirement check",
+			"runtime", name,
+			"requirementScore", reqMatch.Score,
+			"allMet", reqMatch.AllRequirementsMet())
+	}
+
 	// Calculate score
 	score, err := s.scorer.CalculateScore(spec, model)
 	if err != nil {
@@ -265,6 +291,10 @@ func (s *defaultSelector) evaluateRuntime(ctx context.Context, spec *v1beta1.Ser
 		return nil
 	}
 
+	// Build match details with requirement match
+	matchDetails := report.MatchDetails
+	matchDetails.RequirementMatch = requirementMatch
+
 	return &RuntimeMatch{
 		RuntimeSelection: RuntimeSelection{
 			Name:      name,
@@ -272,8 +302,32 @@ func (s *defaultSelector) evaluateRuntime(ctx context.Context, spec *v1beta1.Ser
 			Score:     score,
 			IsCluster: isCluster,
 		},
-		MatchDetails: report.MatchDetails,
+		MatchDetails: matchDetails,
 	}
+}
+
+// getRuntimeAnnotations fetches annotations for a runtime.
+func (s *defaultSelector) getRuntimeAnnotations(ctx context.Context, name string, namespace string, isCluster bool) map[string]string {
+	collection, err := s.fetcher.FetchRuntimes(ctx, namespace)
+	if err != nil {
+		return nil
+	}
+
+	if isCluster {
+		for _, rt := range collection.ClusterRuntimes {
+			if rt.Name == name {
+				return rt.Annotations
+			}
+		}
+	} else {
+		for _, rt := range collection.NamespaceRuntimes {
+			if rt.Name == name {
+				return rt.Annotations
+			}
+		}
+	}
+
+	return nil
 }
 
 // sortMatches sorts runtime matches by score and other criteria.

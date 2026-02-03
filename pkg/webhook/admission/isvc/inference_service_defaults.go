@@ -127,7 +127,20 @@ func DefaultInferenceService(ctx context.Context, c client.Client, isvc *v1beta1
 	if isvc.Spec.Router != nil {
 		defaultRouter(isvc.Spec.Router)
 	}
+
+	// Set default values for ServiceRequirements if present
+	defaultServiceRequirements(isvc)
+
 	return nil
+}
+
+// defaultServiceRequirements sets default values for ServiceRequirements
+func defaultServiceRequirements(isvc *v1beta1.InferenceService) {
+	// Only apply defaults if Requirements is specified but OptimizationPolicy is empty
+	if isvc.Spec.Requirements != nil && isvc.Spec.Requirements.OptimizationPolicy == "" {
+		// Default to Balanced optimization policy
+		isvc.Spec.Requirements.OptimizationPolicy = v1beta1.Balanced
+	}
 }
 
 // isPredictorUsed checks if the Predictor field is used in the InferenceService

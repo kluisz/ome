@@ -53,6 +53,12 @@ type InferenceServiceSpec struct {
 	// AcceleratorSelector specifies accelerator selection preferences
 	// +optional
 	AcceleratorSelector *AcceleratorSelector `json:"acceleratorSelector,omitempty"`
+
+	// Requirements defines workload-specific requirements for runtime selection
+	// This enables intelligent, workload-aware runtime selection based on
+	// optimization policies, performance SLAs, and capability requirements.
+	// +optional
+	Requirements *ServiceRequirements `json:"requirements,omitempty"`
 }
 
 // AcceleratorSelector defines how to select accelerators for the InferenceService
@@ -128,6 +134,62 @@ const (
 
 	// FirstAvailable selects the first matching accelerator (fastest scheduling)
 	FirstAvailablePolicy AcceleratorSelectionPolicy = "FirstAvailable"
+)
+
+// ServiceRequirements defines workload-specific requirements for intelligent runtime selection.
+// These requirements enable the runtime selector to choose the most appropriate runtime
+// based on performance characteristics, optimization policies, and capability requirements.
+type ServiceRequirements struct {
+	// OptimizationPolicy specifies the optimization strategy for runtime selection.
+	// This influences which runtime is selected and what engine parameters are injected.
+	// +kubebuilder:validation:Enum=LatencyOptimized;ThroughputOptimized;CostOptimized;Balanced
+	// +optional
+	OptimizationPolicy OptimizationPolicy `json:"optimizationPolicy,omitempty"`
+
+	// MaxContextLength specifies the maximum context length required in tokens.
+	// Runtimes that cannot support this context length will be filtered out.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	MaxContextLength *int64 `json:"maxContextLength,omitempty"`
+
+	// MinThroughput specifies the minimum required throughput in tokens/second.
+	// Runtimes with lower typical throughput will be scored lower.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	MinThroughput *int64 `json:"minThroughput,omitempty"`
+
+	// MaxP99Latency specifies the maximum acceptable P99 latency in milliseconds.
+	// Runtimes with higher typical latency will be scored lower.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	MaxP99Latency *int64 `json:"maxP99Latency,omitempty"`
+
+	// MaxConcurrency specifies the maximum number of concurrent requests required.
+	// This may influence runtime selection and parameter injection.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	MaxConcurrency *int64 `json:"maxConcurrency,omitempty"`
+}
+
+// OptimizationPolicy defines the optimization strategy for runtime selection and configuration.
+type OptimizationPolicy string
+
+const (
+	// LatencyOptimized prioritizes low latency for real-time applications like chatbots.
+	// Runtimes and parameters are selected to minimize response time.
+	LatencyOptimized OptimizationPolicy = "LatencyOptimized"
+
+	// ThroughputOptimized prioritizes high throughput for batch processing workloads.
+	// Runtimes and parameters are selected to maximize tokens/second.
+	ThroughputOptimized OptimizationPolicy = "ThroughputOptimized"
+
+	// CostOptimized prioritizes cost efficiency, potentially trading off some performance.
+	// Runtimes and parameters are selected to minimize resource usage.
+	CostOptimized OptimizationPolicy = "CostOptimized"
+
+	// Balanced provides a balance between latency, throughput, and cost.
+	// This is the default policy when none is specified.
+	Balanced OptimizationPolicy = "Balanced"
 )
 
 // EngineSpec defines the configuration for the Engine component (can be used for both single-node and multi-node deployments)

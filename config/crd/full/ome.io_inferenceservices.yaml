@@ -32604,6 +32604,32 @@ spec:
                           x-kubernetes-list-type: map
                       type: object
                   type: object
+                requirements:
+                  properties:
+                    maxConcurrency:
+                      format: int64
+                      minimum: 1
+                      type: integer
+                    maxContextLength:
+                      format: int64
+                      minimum: 1
+                      type: integer
+                    maxP99Latency:
+                      format: int64
+                      minimum: 1
+                      type: integer
+                    minThroughput:
+                      format: int64
+                      minimum: 1
+                      type: integer
+                    optimizationPolicy:
+                      enum:
+                        - LatencyOptimized
+                        - ThroughputOptimized
+                        - CostOptimized
+                        - Balanced
+                      type: string
+                  type: object
                 router:
                   properties:
                     activeDeadlineSeconds:
